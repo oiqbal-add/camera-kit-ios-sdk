@@ -38,7 +38,7 @@ open class CameraView: UIView {
         label.font = .preferredFont(forTextStyle: .headline)
         label.textColor = .white
         label.translatesAutoresizingMaskIntoConstraints = false
-
+        label.isHidden = true
         return label
     }()
 
@@ -56,7 +56,7 @@ open class CameraView: UIView {
     public let cameraActionsView: CameraActionsView = {
         let stackView = CameraActionsView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
-
+        stackView.isHidden = true
         return stackView
     }()
 
@@ -157,6 +157,7 @@ open class CameraView: UIView {
         let view = MessageNotificationView()
         view.alpha = 0.0
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.isHidden = true
         return view
     }()
 
@@ -211,12 +212,9 @@ extension CameraView {
         setupToneMapButtons()
         setupPortraitButtons()
         setupHintLabel()
-        setupLensLabel()
         setupCameraRing()
         setupCarousel()
         setupMediaPicker()
-        setupMessageView()
-        //setupSnapAttributionView()
         setupActivityIndicator()
         setupFlashControlView()
         setupFlashControlDismissalHint()
@@ -234,6 +232,16 @@ extension CameraView {
             previewView.trailingAnchor.constraint(equalTo: trailingAnchor),
             previewView.topAnchor.constraint(equalTo: topAnchor),
             previewView.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+    }
+
+    private func setupCameraActionsView() {
+        addSubview(cameraActionsView)
+        cameraActionsView.isHidden = true
+        NSLayoutConstraint.activate([
+            cameraActionsView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 6.0),
+            cameraActionsView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8.0),
+            cameraActionsView.widthAnchor.constraint(equalToConstant: 40),
         ])
     }
 }
@@ -262,19 +270,6 @@ extension CameraView {
             cameraBottomBar.trailingAnchor.constraint(equalTo: trailingAnchor),
             cameraBottomBar.bottomAnchor.constraint(equalTo: bottomAnchor),
             cameraBottomBar.heightAnchor.constraint(equalToConstant: 50.0),
-        ])
-    }
-}
-
-// MARK: Camera Actions View
-
-extension CameraView {
-    private func setupCameraActionsView() {
-        addSubview(cameraActionsView)
-        NSLayoutConstraint.activate([
-            cameraActionsView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 6.0),
-            cameraActionsView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8.0),
-            cameraActionsView.widthAnchor.constraint(equalToConstant: 40),
         ])
     }
 }

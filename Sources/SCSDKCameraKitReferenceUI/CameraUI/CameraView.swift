@@ -265,6 +265,7 @@ extension CameraView {
 extension CameraView {
     private func setupCameraBar() {
         addSubview(cameraBottomBar)
+        cameraBottomBar.closeButton.isHidden = true
         NSLayoutConstraint.activate([
             cameraBottomBar.leadingAnchor.constraint(equalTo: leadingAnchor),
             cameraBottomBar.trailingAnchor.constraint(equalTo: trailingAnchor),

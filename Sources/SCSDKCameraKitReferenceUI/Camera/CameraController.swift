@@ -393,10 +393,12 @@ open class CameraController: NSObject, LensRepositoryGroupObserver, LensPrefetch
 
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            let lenses = self.groupIDs.flatMap {
+            let allLenses = self.groupIDs.flatMap {
                 self.cameraKit.lenses.repository.lenses(groupID: $0)
             }
-            self.uiDelegate?.cameraController(self, updatedLenses: lenses)
+            self.uiDelegate?.cameraController(self, updatedLenses: allLenses)
+            // Remove the automatic lens application
+            // Let the carousel handle the initial selection
         }
     }
 

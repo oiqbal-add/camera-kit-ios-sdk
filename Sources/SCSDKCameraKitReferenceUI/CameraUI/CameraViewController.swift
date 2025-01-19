@@ -180,9 +180,7 @@ open class CameraViewController: UIViewController, CameraControllerUIDelegate {
 
     open func cameraController(_ controller: CameraController, updatedLenses lenses: [Lens]) {
         cameraView.carouselView.reloadData()
-        let selectedItem = cameraView.carouselView.selectedItem
-
-        if !(selectedItem is EmptyItem) {
+        if let selectedItem = cameraView.carouselView.selectedItem {
             cameraView.carouselView.selectItem(selectedItem)
         }
     }
@@ -522,24 +520,19 @@ private extension CameraViewController {
 
 extension CameraViewController: CarouselViewDelegate, CarouselViewDataSource {
     public func carouselView(_ view: CarouselView, didSelect item: CarouselItem, at index: Int) {
-        // first item is empty item
-        guard index > 0 else {
-            clearLens()
-            return
-        }
-
+        // Remove the empty item check since we don't have EmptyItem anymore
         guard let lens = cameraController.cameraKit.lenses.repository.lens(id: item.lensId, groupID: item.groupId)
         else { return }
         applyLens(lens)
     }
 
     public func itemsForCarouselView(_ view: CarouselView) -> [CarouselItem] {
-        [EmptyItem()]
-            + cameraController.groupIDs.flatMap {
-                cameraController.cameraKit.lenses.repository.lenses(groupID: $0).map {
-                    CarouselItem(lensId: $0.id, groupId: $0.groupId, imageUrl: $0.iconUrl)
-                }
+        // Just return the lenses
+        cameraController.groupIDs.flatMap {
+            cameraController.cameraKit.lenses.repository.lenses(groupID: $0).map {
+                CarouselItem(lensId: $0.id, groupId: $0.groupId, imageUrl: $0.iconUrl)
             }
+        }
     }
 }
 

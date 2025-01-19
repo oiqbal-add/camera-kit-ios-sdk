@@ -38,10 +38,18 @@ public class CarouselView: UIView, UICollectionViewDataSource, UICollectionViewD
     public func reloadData() {
         items = dataSource?.itemsForCarouselView(self) ?? []
         collectionView.reloadData()
+        
+        // If this is the first load and we have items, select the first lens
+        if selectedItem == nil && !items.isEmpty {
+            // Scroll to the first lens (now at index 0 since we removed EmptyItem)
+            let indexPath = IndexPath(item: 0, section: 0)
+            collectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: true)
+            selectItemHelper(at: 0)
+        }
     }
 
     /// Current selected item or nil if none are selected (ie. when carousel is empty).
-    public private(set) var selectedItem: CarouselItem = EmptyItem()
+    public private(set) var selectedItem: CarouselItem?
 
     /// Current list of items in the carousel.
     private var items = [CarouselItem]()
@@ -165,7 +173,9 @@ public class CarouselView: UIView, UICollectionViewDataSource, UICollectionViewD
 
         collectionViewLayout.itemSize = CGSize(width: frame.size.height, height: frame.size.height)
         reloadData()
-        selectItem(selectedItem)
+        if let selectedItem = selectedItem {
+            selectItem(selectedItem)
+        }
     }
 
     // MARK: Items
@@ -181,10 +191,15 @@ public class CarouselView: UIView, UICollectionViewDataSource, UICollectionViewD
                 at: IndexPath(item: index, section: 0), at: .centeredHorizontally, animated: true
             )
             return true
-        } else {
-            selectedItem = EmptyItem()
-            return false
+        } else if !items.isEmpty {
+            // If selection fails but we have items, select the first one
+            selectedItem = items.first
+            collectionView.scrollToItem(
+                at: IndexPath(item: 0, section: 0), at: .centeredHorizontally, animated: true
+            )
+            return true
         }
+        return false
     }
 
     /// Hide lens carousel.
@@ -192,7 +207,7 @@ public class CarouselView: UIView, UICollectionViewDataSource, UICollectionViewD
     public func hideCarousel() {
         facadeSelectionRingView.isHidden = true
         storedItems = items
-        items = [selectedItem]
+        items = [selectedItem].compactMap { $0 } ?? []
         collectionView.reloadData()
     }
 
@@ -202,7 +217,9 @@ public class CarouselView: UIView, UICollectionViewDataSource, UICollectionViewD
         facadeSelectionRingView.isHidden = false
         items = storedItems
         collectionView.reloadData()
-        selectItem(selectedItem)
+        if let selectedItem = selectedItem {
+            selectItem(selectedItem)
+        }
     }
 
     // MARK: Collection View
@@ -234,15 +251,9 @@ public class CarouselView: UIView, UICollectionViewDataSource, UICollectionViewD
         cell.accessibilityIdentifier = CarouselElements.lensCell.id
         cell.accessibilityLabel = item.lensId
 
-        // handle initial state edge case issues
-        // normal lens: don't transform initial state
-        // empty lens: set alpha to 0
-        if selectedItem.id == item.id {
-            if item is EmptyItem {
-                cell.contentView.alpha = 0.0
-            } else {
-                cell.transform = .identity
-            }
+        // Update this section to handle the new initial state
+        if let selectedItem = selectedItem, selectedItem.id == item.id {
+            cell.transform = .identity
         }
 
         return cell
@@ -378,13 +389,9 @@ extension CarouselView: CarouselCollectionViewLayoutDataSource {
         -> CGAffineTransform
     {
         let item = items[indexPath.item]
-        guard
-            selectedItem.id == item.id,
-            !(selectedItem is EmptyItem)
-        else {
+        guard selectedItem?.id == item.id else {
             return CGAffineTransform(scaleX: 0.8, y: 0.8)
         }
-
         return .identity
     }
 }

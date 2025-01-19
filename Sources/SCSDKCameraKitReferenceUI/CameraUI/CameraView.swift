@@ -238,6 +238,7 @@ extension CameraView {
     private func setupCameraActionsView() {
         addSubview(cameraActionsView)
         cameraActionsView.isHidden = true
+        cameraActionsView.flipCameraButton.isHidden = true
         NSLayoutConstraint.activate([
             cameraActionsView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 6.0),
             cameraActionsView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8.0),

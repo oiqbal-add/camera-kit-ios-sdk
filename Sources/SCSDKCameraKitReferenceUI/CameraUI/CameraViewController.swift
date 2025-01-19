@@ -282,10 +282,6 @@ private extension CameraViewController {
         let singleTap = UITapGestureRecognizer(target: self, action: #selector(handleSingleTap(sender:)))
         cameraView.previewView.addGestureRecognizer(singleTap)
 
-        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(flip(sender:)))
-        doubleTap.numberOfTapsRequired = 2
-        cameraView.previewView.addGestureRecognizer(doubleTap)
-
         let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(zoom(sender:)))
         cameraView.previewView.addGestureRecognizer(pinchGestureRecognizer)
         cameraView.previewView.automaticallyConfiguresTouchHandler = true
@@ -309,7 +305,6 @@ private extension CameraViewController {
         cameraView.carouselView.dataSource = self
 
         cameraView.cameraButton.delegate = self
-        cameraView.cameraButton.allowWhileRecording = [doubleTap, pinchGestureRecognizer]
 
         cameraView.mediaPickerView.provider = cameraController.lensMediaProvider
         cameraView.mediaPickerView.delegate = cameraController
@@ -559,60 +554,15 @@ extension CameraViewController: CameraButtonDelegate {
     }
 
     public func cameraButtonHoldBegan(_ cameraButton: CameraButton) {
-        print("Start recording")
-        cameraController.startRecording()
-        cameraView.hideAllControls()
-        UIView.animate(
-            withDuration: 0.15,
-            animations: { [weak self] in
-                self?.cameraView.cameraActionsView.collapse()
-            }
-        )
-        cameraView.carouselView.hideCarousel()
-        appOrientationDelegate?.lockOrientation(currentInterfaceOrientationMask)
-        if #available(iOS 16.0, *) {
-            UIView.performWithoutAnimation {
-                setNeedsUpdateOfSupportedInterfaceOrientations()
-            }
-        }
-        cameraView.mediaPickerView.dismiss()
+        // Empty implementation
     }
 
     public func cameraButtonHoldCancelled(_ cameraButton: CameraButton) {
-        cameraController.cancelRecording()
-        restoreActiveCameraState()
+        // Empty implementation
     }
 
     public func cameraButtonHoldEnded(_ cameraButton: CameraButton) {
-        print("Finish recording")
-        cameraController.finishRecording { url, error in
-            DispatchQueue.main.async {
-                guard let url else { return }
-                self.cameraController.clearLens(willReapply: true)
-                self.cameraController.restoreBrightnessIfNecessary()
-                let player = VideoPreviewViewController(videoUrl: url)
-                player.snapchatDelegate = self.cameraController.snapchatDelegate
-                player.presentationController?.delegate = self
-                player.onDismiss = { [weak self] in
-                    self?.cameraController.reapplyCurrentLens()
-                    self?.cameraController.increaseBrightnessIfNecessary()
-                }
-                self.present(player, animated: true) {
-                    self.restoreActiveCameraState()
-                }
-            }
-        }
-    }
-
-    private func restoreActiveCameraState() {
-        cameraView.cameraActionsView.expand()
-        cameraView.carouselView.showCarousel()
-        appOrientationDelegate?.unlockOrientation()
-        if #available(iOS 16.0, *) {
-            UIView.performWithoutAnimation {
-                setNeedsUpdateOfSupportedInterfaceOrientations()
-            }
-        }
+        // Empty implementation
     }
 }
 

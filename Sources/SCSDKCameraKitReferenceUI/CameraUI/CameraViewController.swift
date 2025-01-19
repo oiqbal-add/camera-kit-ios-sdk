@@ -152,7 +152,7 @@ open class CameraViewController: UIViewController, CameraControllerUIDelegate {
     /// - Parameters:
     ///   - lens: selected lens
     open func applyLens(_ lens: Lens) {
-        cameraView.activityIndicator.stopAnimating() // stop any loading indicator that may still be going on from previous lens
+        cameraView.activityIndicator.stopAnimating()
         cameraController.applyLens(lens) { [weak self] success in
             guard let strongSelf = self else { return }
             if success {
@@ -161,7 +161,6 @@ open class CameraViewController: UIViewController, CameraControllerUIDelegate {
                 DispatchQueue.main.async {
                     strongSelf.hideAllHints()
                     strongSelf.showMessage(lens: lens)
-                    strongSelf.cameraView.cameraBottomBar.closeButton.isHidden = false
                     strongSelf.cameraView.lensLabel.text = lens.name ?? lens.id
                 }
             }

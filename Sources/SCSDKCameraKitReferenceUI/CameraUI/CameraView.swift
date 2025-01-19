@@ -216,7 +216,7 @@ extension CameraView {
         setupCarousel()
         setupMediaPicker()
         setupMessageView()
-        setupSnapAttributionView()
+        //setupSnapAttributionView()
         setupActivityIndicator()
         setupFlashControlView()
         setupFlashControlDismissalHint()

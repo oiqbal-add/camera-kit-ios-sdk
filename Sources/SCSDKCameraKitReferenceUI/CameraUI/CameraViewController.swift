@@ -281,9 +281,6 @@ private extension CameraViewController {
     func setupActions() {
         let singleTap = UITapGestureRecognizer(target: self, action: #selector(handleSingleTap(sender:)))
         cameraView.previewView.addGestureRecognizer(singleTap)
-
-        let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(zoom(sender:)))
-        cameraView.previewView.addGestureRecognizer(pinchGestureRecognizer)
         cameraView.previewView.automaticallyConfiguresTouchHandler = true
 
         cameraView.cameraBottomBar.closeButton.addTarget(
@@ -291,10 +288,6 @@ private extension CameraViewController {
         )
         cameraView.cameraBottomBar.snapButton.addTarget(
             self, action: #selector(snapchatButtonPressed(_:)), for: .touchUpInside
-        )
-
-        cameraView.cameraActionsView.flipCameraButton.addTarget(
-            self, action: #selector(flip(sender:)), for: .touchUpInside
         )
 
         setupFlashButtons()
@@ -543,12 +536,10 @@ extension CameraViewController: CameraButtonDelegate {
                 viewController.snapchatDelegate = self.cameraController.snapchatDelegate
                 viewController.presentationController?.delegate = self
                 viewController.onDismiss = { [weak self] in
-                    self?.cameraController.reapplyCurrentLens()
                     self?.cameraController.increaseBrightnessIfNecessary()
                 }
-                self.present(viewController, animated: true) { [weak self] in
-                    self?.cameraController.clearLens(willReapply: true)
-                }
+                // Present without clearing the lens
+                self.present(viewController, animated: true)
             }
         }
     }

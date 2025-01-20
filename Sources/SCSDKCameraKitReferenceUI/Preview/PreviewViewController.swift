@@ -51,7 +51,7 @@ public class PreviewViewController: UIViewController {
         return button
     }()
 
-    fileprivate let shareButton: UIButton = {
+    internal let shareButton: UIButton = {
         let button = UIButton()
         button.accessibilityIdentifier = PreviewElements.shareButton.id
         button.setImage(UIImage(named: "ck_share", in: BundleHelper.resourcesBundle, compatibleWith: nil), for: .normal)
@@ -59,7 +59,7 @@ public class PreviewViewController: UIViewController {
         return button
     }()
 
-    fileprivate let printButton: UIButton = {
+    internal let printButton: UIButton = {
         let button = UIButton()
         button.accessibilityIdentifier = "PrintButton"
         button.setImage(UIImage(systemName: "printer"), for: .normal)
@@ -68,7 +68,7 @@ public class PreviewViewController: UIViewController {
         return button
     }()
 
-    fileprivate let qrCodeButton: UIButton = {
+    internal let qrCodeButton: UIButton = {
         let button = UIButton()
         button.accessibilityIdentifier = "QRCodeButton"
         button.setImage(UIImage(systemName: "qrcode"), for: .normal)
@@ -77,7 +77,7 @@ public class PreviewViewController: UIViewController {
         return button
     }()
 
-    fileprivate lazy var bottomButtonStackView: UIStackView = {
+    internal lazy var bottomButtonStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [shareButton, printButton, qrCodeButton])
         stackView.alignment = .center
         stackView.axis = .horizontal

@@ -48,17 +48,77 @@ public class ImagePreviewViewController: PreviewViewController {
         
         let bottomAnchor = view.safeAreaLayoutGuide.bottomAnchor
         
+        // Create bottom bar background first
+        let bottomBarBackground = UIView()
+        bottomBarBackground.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+        bottomBarBackground.translatesAutoresizingMaskIntoConstraints = false
+        view.insertSubview(bottomBarBackground, at: 1)
+        
         NSLayoutConstraint.activate([
-            // Keep small top padding, increase bottom padding for buttons
-            imageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 40),
-            imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
-            imageView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
-            // Make bottom padding much larger (from 60 to 120) for buttons
-            imageView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -120)
+            bottomBarBackground.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            bottomBarBackground.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bottomBarBackground.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            bottomBarBackground.heightAnchor.constraint(equalToConstant: 120)
         ])
         
+        // Setup image view with proper aspect ratio
         imageView.contentMode = .scaleAspectFit
+        imageView.clipsToBounds = true
+        NSLayoutConstraint.activate([
+            imageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            imageView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            imageView.bottomAnchor.constraint(equalTo: bottomBarBackground.topAnchor, constant: -20)
+        ])
+        
+        // Style buttons
+        let buttons = [(shareButton, "Share"), (printButton, "Print"), (qrCodeButton, "QR Code")]
+        buttons.forEach { (button, title) in
+            // Remove background and border
+            button.backgroundColor = .clear
+            
+            // Make icons much bigger
+            if let imageView = button.imageView {
+                imageView.contentMode = .scaleAspectFit
+                button.imageEdgeInsets = UIEdgeInsets(top: 10, left: 10, bottom: 30, right: 10)
+            }
+            
+            // Configure title
+            button.setTitle(title, for: .normal)
+            button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
+            button.setTitleColor(.white, for: .normal)
+            button.titleEdgeInsets = UIEdgeInsets(top: 60, left: -60, bottom: 0, right: 0)
+            
+            // Make button bigger
+            button.transform = CGAffineTransform(scaleX: 1.5, y: 1.5)
+        }
+        
+        // Update button stack view constraints
+        bottomButtonStackView.spacing = 100 // Increase spacing between buttons
+        NSLayoutConstraint.activate([
+            bottomButtonStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            bottomButtonStackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -20),
+            bottomButtonStackView.heightAnchor.constraint(equalToConstant: 100)
+        ])
+        
         view.backgroundColor = .black
+    }
+
+    @objc private func handleHover(_ gesture: UIHoverGestureRecognizer) {
+        guard let button = gesture.view as? UIButton else { return }
+        
+        UIView.animate(withDuration: 0.3) {
+            switch gesture.state {
+            case .began, .changed:
+                button.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+                button.backgroundColor = UIColor(white: 1, alpha: 0.25)
+            case .ended:
+                button.transform = .identity
+                button.backgroundColor = UIColor(white: 1, alpha: 0.15)
+            default:
+                break
+            }
+        }
     }
 
     // MARK: Action Overrides
@@ -196,14 +256,14 @@ public class ImagePreviewViewController: PreviewViewController {
     }
     
     private func showQRCode(for url: String) {
+        let qrVC = UIViewController()
+        qrVC.view.backgroundColor = .black
+        qrVC.modalPresentationStyle = .formSheet
+        qrVC.preferredContentSize = CGSize(width: 350, height: 450) // Fixed size for better presentation
+        
+        // Create QR code
         let qrGenerator = CIFilter.qrCodeGenerator()
-        
-        guard let messageData = url.data(using: .utf8) else {
-            showError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to generate QR code"]))
-            return
-        }
-        
-        qrGenerator.setValue(messageData, forKey: "inputMessage")
+        qrGenerator.setValue(url.data(using: .utf8), forKey: "inputMessage")
         
         guard let qrImage = qrGenerator.outputImage else {
             showError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to generate QR code"]))
@@ -219,31 +279,71 @@ public class ImagePreviewViewController: PreviewViewController {
             return
         }
         
-        let qrUIImage = UIImage(cgImage: cgImage)
+        // Main container for all content
+        let mainContainer = UIView()
+        mainContainer.backgroundColor = UIColor(white: 0.1, alpha: 1.0) // Dark gray background
+        mainContainer.layer.cornerRadius = 25
+        mainContainer.translatesAutoresizingMaskIntoConstraints = false
+        qrVC.view.addSubview(mainContainer)
         
-        // Create and show QR code view
-        let qrAlert = UIAlertController(title: "Scan QR Code", 
-                                      message: "Scan this code to view the image", 
-                                      preferredStyle: .alert)
+        // QR code container
+        let qrContainer = UIView()
+        qrContainer.backgroundColor = .white
+        qrContainer.layer.cornerRadius = 20
+        qrContainer.translatesAutoresizingMaskIntoConstraints = false
+        mainContainer.addSubview(qrContainer)
         
-        // Add QR code image view
-        let imageView = UIImageView(image: qrUIImage)
+        let imageView = UIImageView(image: UIImage(cgImage: cgImage))
         imageView.contentMode = .scaleAspectFit
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        qrAlert.view.addSubview(imageView)
+        qrContainer.addSubview(imageView)
         
+        let titleLabel = UILabel()
+        titleLabel.text = "Scan QR Code"
+        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
+        titleLabel.textColor = .white
+        titleLabel.textAlignment = .center
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        mainContainer.addSubview(titleLabel)
+        
+        let instructionsLabel = UILabel()
+        instructionsLabel.text = "Use your phone's camera to scan"
+        instructionsLabel.font = .systemFont(ofSize: 16)
+        instructionsLabel.textColor = .lightGray
+        instructionsLabel.textAlignment = .center
+        instructionsLabel.translatesAutoresizingMaskIntoConstraints = false
+        mainContainer.addSubview(instructionsLabel)
+        
+        // Layout
         NSLayoutConstraint.activate([
-            imageView.centerXAnchor.constraint(equalTo: qrAlert.view.centerXAnchor),
-            imageView.topAnchor.constraint(equalTo: qrAlert.view.topAnchor, constant: 60),
-            imageView.widthAnchor.constraint(equalToConstant: 200),
-            imageView.heightAnchor.constraint(equalToConstant: 200)
+            // Main container
+            mainContainer.centerXAnchor.constraint(equalTo: qrVC.view.centerXAnchor),
+            mainContainer.centerYAnchor.constraint(equalTo: qrVC.view.centerYAnchor),
+            mainContainer.widthAnchor.constraint(equalToConstant: 300),
+            mainContainer.heightAnchor.constraint(equalToConstant: 400),
+            
+            // Title
+            titleLabel.topAnchor.constraint(equalTo: mainContainer.topAnchor, constant: 25),
+            titleLabel.centerXAnchor.constraint(equalTo: mainContainer.centerXAnchor),
+            
+            // QR Container
+            qrContainer.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 25),
+            qrContainer.centerXAnchor.constraint(equalTo: mainContainer.centerXAnchor),
+            qrContainer.widthAnchor.constraint(equalToConstant: 250),
+            qrContainer.heightAnchor.constraint(equalToConstant: 250),
+            
+            // QR Image
+            imageView.topAnchor.constraint(equalTo: qrContainer.topAnchor, constant: 15),
+            imageView.leadingAnchor.constraint(equalTo: qrContainer.leadingAnchor, constant: 15),
+            imageView.trailingAnchor.constraint(equalTo: qrContainer.trailingAnchor, constant: -15),
+            imageView.bottomAnchor.constraint(equalTo: qrContainer.bottomAnchor, constant: -15),
+            
+            // Instructions
+            instructionsLabel.topAnchor.constraint(equalTo: qrContainer.bottomAnchor, constant: 25),
+            instructionsLabel.centerXAnchor.constraint(equalTo: mainContainer.centerXAnchor)
         ])
         
-        // Make alert taller to accommodate QR code
-        qrAlert.view.heightAnchor.constraint(equalToConstant: 320).isActive = true
-        
-        qrAlert.addAction(UIAlertAction(title: "Done", style: .default))
-        present(qrAlert, animated: true)
+        present(qrVC, animated: true)
     }
     
     private func showError(_ error: Error) {

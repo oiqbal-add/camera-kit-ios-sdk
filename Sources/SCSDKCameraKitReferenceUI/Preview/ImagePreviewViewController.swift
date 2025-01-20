@@ -38,12 +38,12 @@ public class ImagePreviewViewController: PreviewViewController {
     override public func viewDidLoad() {
         super.viewDidLoad()
         modalPresentationStyle = .overFullScreen
-        setup()
+        setupUI()
     }
 
     // MARK: Setup
 
-    private func setup() {
+    private func setupUI() {
         view.insertSubview(imageView, at: 0)
         
         let bottomAnchor = view.safeAreaLayoutGuide.bottomAnchor
@@ -58,7 +58,7 @@ public class ImagePreviewViewController: PreviewViewController {
             bottomBarBackground.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             bottomBarBackground.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             bottomBarBackground.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            bottomBarBackground.heightAnchor.constraint(equalToConstant: 120)
+            bottomBarBackground.heightAnchor.constraint(equalToConstant: 140)
         ])
         
         // Setup image view with proper aspect ratio
@@ -71,54 +71,182 @@ public class ImagePreviewViewController: PreviewViewController {
             imageView.bottomAnchor.constraint(equalTo: bottomBarBackground.topAnchor, constant: -20)
         ])
         
-        // Style buttons
-        let buttons = [(shareButton, "Share"), (printButton, "Print"), (qrCodeButton, "QR Code")]
-        buttons.forEach { (button, title) in
-            // Remove background and border
-            button.backgroundColor = .clear
+        // Clear existing buttons
+        bottomButtonStackView.subviews.forEach { $0.removeFromSuperview() }
+        
+        // Configure buttons
+        let buttonConfigs: [(String, String)] = [
+            ("AirDrop", "square.and.arrow.up.fill"),
+            ("Print", "printer.fill"),
+            ("QR Code", "qrcode")
+        ]
+        
+        buttonConfigs.forEach { (title, iconName) in
+            // Create container stack view for each button
+            let buttonStack = UIStackView()
+            buttonStack.axis = .vertical
+            buttonStack.alignment = .center
+            buttonStack.spacing = 8
+            buttonStack.translatesAutoresizingMaskIntoConstraints = false
             
-            // Make icons much bigger
-            if let imageView = button.imageView {
-                imageView.contentMode = .scaleAspectFit
-                button.imageEdgeInsets = UIEdgeInsets(top: 10, left: 10, bottom: 30, right: 10)
+            // Create and configure icon
+            let iconConfig = UIImage.SymbolConfiguration(pointSize: 32, weight: .medium)
+            let icon = UIImage(systemName: iconName, withConfiguration: iconConfig)
+            
+            let iconView = UIImageView(image: icon)
+            iconView.contentMode = .scaleAspectFit
+            iconView.tintColor = .white
+            
+            // Create and configure label
+            let label = UILabel()
+            label.text = title
+            label.font = .systemFont(ofSize: 12, weight: .medium)
+            label.textColor = .white
+            label.textAlignment = .center
+            
+            // Add views to stack
+            buttonStack.addArrangedSubview(iconView)
+            buttonStack.addArrangedSubview(label)
+            
+            // Create button that covers the entire stack
+            let button = UIButton(type: .system)
+            button.translatesAutoresizingMaskIntoConstraints = false
+            
+            // Wrap stack view in a container with the button
+            let container = UIView()
+            container.translatesAutoresizingMaskIntoConstraints = false
+            container.addSubview(buttonStack)
+            container.addSubview(button)
+            
+            // Set constraints
+            NSLayoutConstraint.activate([
+                iconView.widthAnchor.constraint(equalToConstant: 32),
+                iconView.heightAnchor.constraint(equalToConstant: 32),
+                
+                buttonStack.topAnchor.constraint(equalTo: container.topAnchor),
+                buttonStack.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+                buttonStack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+                
+                button.topAnchor.constraint(equalTo: container.topAnchor),
+                button.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+                button.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                button.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                
+                container.widthAnchor.constraint(equalToConstant: 80),
+                container.heightAnchor.constraint(equalToConstant: 80)
+            ])
+            
+            // Add tap handler
+            switch title {
+            case "AirDrop":
+                button.addTarget(self, action: #selector(airDropButtonPressed(_:)), for: .touchUpInside)
+            case "Print":
+                button.addTarget(self, action: #selector(printButtonPressed(_:)), for: .touchUpInside)
+            case "QR Code":
+                button.addTarget(self, action: #selector(qrCodeButtonPressed(_:)), for: .touchUpInside)
+            default:
+                break
             }
             
-            // Configure title
-            button.setTitle(title, for: .normal)
-            button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-            button.setTitleColor(.white, for: .normal)
-            button.titleEdgeInsets = UIEdgeInsets(top: 60, left: -60, bottom: 0, right: 0)
+            // Add highlight effect
+            button.addTarget(self, action: #selector(buttonTouchDown(_:)), for: .touchDown)
+            button.addTarget(self, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside])
             
-            // Make button bigger
-            button.transform = CGAffineTransform(scaleX: 1.5, y: 1.5)
+            // Add to main stack view
+            bottomButtonStackView.addArrangedSubview(container)
         }
         
-        // Update button stack view constraints
-        bottomButtonStackView.spacing = 100 // Increase spacing between buttons
+        // Configure main stack view
+        bottomButtonStackView.spacing = 50
+        bottomButtonStackView.distribution = .equalSpacing
+        bottomButtonStackView.alignment = .center
+        
         NSLayoutConstraint.activate([
             bottomButtonStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            bottomButtonStackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -20),
-            bottomButtonStackView.heightAnchor.constraint(equalToConstant: 100)
+            bottomButtonStackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -30),
+            bottomButtonStackView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 40),
+            bottomButtonStackView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -40),
+            bottomButtonStackView.heightAnchor.constraint(equalToConstant: 80)
         ])
         
         view.backgroundColor = .black
     }
 
-    @objc private func handleHover(_ gesture: UIHoverGestureRecognizer) {
-        guard let button = gesture.view as? UIButton else { return }
-        
-        UIView.animate(withDuration: 0.3) {
-            switch gesture.state {
-            case .began, .changed:
-                button.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
-                button.backgroundColor = UIColor(white: 1, alpha: 0.25)
-            case .ended:
-                button.transform = .identity
-                button.backgroundColor = UIColor(white: 1, alpha: 0.15)
-            default:
-                break
+    @objc private func buttonTapped(_ sender: UIButton) {
+        // Add subtle animation on tap
+        UIView.animate(withDuration: 0.1, animations: {
+            sender.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        }) { _ in
+            UIView.animate(withDuration: 0.1) {
+                sender.transform = .identity
             }
         }
+        
+        // Handle existing button actions
+        if sender == airDropButton {
+            airDropButtonPressed(sender)
+        } else if sender == printButton {
+            printButtonPressed(sender)
+        } else if sender == qrCodeButton {
+            qrCodeButtonPressed(sender)
+        }
+    }
+
+    @objc private func airDropButtonPressed(_ sender: UIButton) {
+        let activityVC = UIActivityViewController(
+            activityItems: [image],
+            applicationActivities: nil
+        )
+        
+        // Exclude everything except AirDrop
+        activityVC.excludedActivityTypes = [
+            .addToReadingList, .assignToContact, .copyToPasteboard,
+            .mail, .message, .postToFacebook, .postToTwitter,
+            .postToWeibo, .print, .saveToCameraRoll, .markupAsPDF
+        ]
+        
+        // Position the popover above the button
+        if let popoverController = activityVC.popoverPresentationController {
+            popoverController.sourceView = sender
+            popoverController.sourceRect = sender.bounds
+            popoverController.permittedArrowDirections = .down
+            popoverController.popoverLayoutMargins = UIEdgeInsets(top: 0, left: 0, bottom: 10, right: 0)
+        }
+        
+        present(activityVC, animated: true)
+    }
+
+    @objc private func saveButtonPressed(_ sender: UIButton) {
+        PHPhotoLibrary.requestAuthorization { [weak self] status in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                if status == .authorized {
+                    PHPhotoLibrary.shared().performChanges({
+                        PHAssetChangeRequest.creationRequestForAsset(from: self.image)
+                    }) { success, error in
+                        DispatchQueue.main.async {
+                            if success {
+                                self.showAlert(title: "Saved!", message: "Photo saved to your library")
+                            } else {
+                                self.showAlert(title: "Error", message: "Failed to save photo: \(error?.localizedDescription ?? "Unknown error")")
+                            }
+                        }
+                    }
+                } else {
+                    self.showAlert(
+                        title: "Permission Required",
+                        message: "Please allow access to your photo library in Settings to save photos"
+                    )
+                }
+            }
+        }
+    }
+
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 
     // MARK: Action Overrides
@@ -356,27 +484,45 @@ public class ImagePreviewViewController: PreviewViewController {
         present(alert, animated: true)
     }
 
-    override public func savePreviewPressed(_ sender: UIButton) {
-        PHPhotoLibrary.shared().performChanges({
-            PHAssetChangeRequest.creationRequestForAsset(from: self.image)
-        }) { saved, error in
-            var title: String
-            var message: String
-            if saved {
-                title = "Save Success"
-                message = "Successfully saved photo to library"
-            } else {
-                title = "Save Failure"
-                message = "Failed to save photo to library"
-                print("failed to save video with error: \(error?.localizedDescription ?? "no error")")
-            }
-
-            DispatchQueue.main.async {
-                let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
-                let action = UIAlertAction(title: "OK", style: .default, handler: nil)
-                alertController.addAction(action)
-                self.present(alertController, animated: true, completion: nil)
-            }
+    // Add these new methods for button highlighting
+    @objc private func buttonTouchDown(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.1) {
+            sender.alpha = 0.7
         }
+    }
+
+    @objc private func buttonTouchUp(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.1) {
+            sender.alpha = 1.0
+        }
+    }
+}
+
+// Add helper extension for button layout
+extension UIButton {
+    func centerImageAndButton(spacing: CGFloat = 6.0) {
+        guard let imageSize = imageView?.image?.size,
+              let titleLabel = titleLabel,
+              let titleText = titleLabel.text else { return }
+        
+        let titleSize = titleText.size(withAttributes: [
+            NSAttributedString.Key.font: titleLabel.font as Any
+        ])
+        
+        let totalHeight = imageSize.height + spacing + titleSize.height
+        
+        imageEdgeInsets = UIEdgeInsets(
+            top: -(totalHeight - imageSize.height),
+            left: 0,
+            bottom: 0,
+            right: -titleSize.width
+        )
+        
+        titleEdgeInsets = UIEdgeInsets(
+            top: 0,
+            left: -imageSize.width,
+            bottom: -(totalHeight - titleSize.height),
+            right: 0
+        )
     }
 }

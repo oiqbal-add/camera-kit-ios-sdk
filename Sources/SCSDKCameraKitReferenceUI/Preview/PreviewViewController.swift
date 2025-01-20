@@ -43,11 +43,34 @@ public class PreviewViewController: UIViewController {
         return button
     }()
 
-    fileprivate let saveButton: UIButton = {
+    internal let airDropButton: UIButton = {
         let button = UIButton()
-        button.setImage(UIImage(named: "ck_save", in: BundleHelper.resourcesBundle, compatibleWith: nil), for: .normal)
+        button.accessibilityIdentifier = "AirDropButton"
+        
+        // Use a simple share icon
+        let config = UIImage.SymbolConfiguration(pointSize: 28, weight: .medium)
+        button.setImage(UIImage(systemName: "square.and.arrow.up")?.withConfiguration(config), for: .normal)
+        button.setTitle("AirDrop", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 12)
+        
+        // Setup vertical layout
+        button.tintColor = .white
+        button.setTitleColor(.white, for: .normal)
+        
+        // Center image and text vertically
+        button.imageEdgeInsets = UIEdgeInsets(top: -15, left: 0, bottom: 0, right: 0)
+        button.titleEdgeInsets = UIEdgeInsets(top: 30, left: -30, bottom: -30, right: 0)
+        
         button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
 
+    internal let saveButton: UIButton = {
+        let button = UIButton()
+        button.accessibilityIdentifier = "SaveButton"
+        button.setImage(UIImage(systemName: "square.and.arrow.down"), for: .normal)
+        button.tintColor = .white
+        button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
@@ -78,11 +101,11 @@ public class PreviewViewController: UIViewController {
     }()
 
     internal lazy var bottomButtonStackView: UIStackView = {
-        let stackView = UIStackView(arrangedSubviews: [shareButton, printButton, qrCodeButton])
+        let stackView = UIStackView(arrangedSubviews: [airDropButton, printButton, qrCodeButton])
         stackView.alignment = .center
         stackView.axis = .horizontal
-        stackView.distribution = .equalCentering
-        stackView.spacing = 70.0
+        stackView.distribution = .equalSpacing
+        stackView.spacing = 70
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -135,8 +158,10 @@ extension PreviewViewController {
         closeButton.addTarget(self, action: #selector(closeButtonPressed(_:)), for: .touchUpInside)
         view.addSubview(closeButton)
         NSLayoutConstraint.activate([
-            closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 32.0),
-            closeButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16.0),
+            closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            closeButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            closeButton.widthAnchor.constraint(equalToConstant: 44),
+            closeButton.heightAnchor.constraint(equalToConstant: 44)
         ])
     }
 
@@ -151,25 +176,37 @@ extension PreviewViewController {
 
 extension PreviewViewController {
     private func setupBottomButtonBar() {
-        shareButton.addTarget(self, action: #selector(sharePreviewPressed(_:)), for: .touchUpInside)
-        printButton.addTarget(self, action: #selector(printButtonPressed(_:)), for: .touchUpInside)
-        qrCodeButton.addTarget(self, action: #selector(qrCodeButtonPressed(_:)), for: .touchUpInside)
-        
-        view.addSubview(bottomButtonStackView)
-        
-        // Make buttons bigger
-        [shareButton, printButton, qrCodeButton].forEach { button in
-            NSLayoutConstraint.activate([
-                button.widthAnchor.constraint(equalToConstant: 80),
-                button.heightAnchor.constraint(equalToConstant: 80)
-            ])
+        // Configure all buttons similarly
+        [printButton, qrCodeButton].forEach { button in
+            button.setTitle(button == printButton ? "Print" : "QR Code", for: .normal)
+            button.titleLabel?.font = .systemFont(ofSize: 12)
+            button.setTitleColor(.white, for: .normal)
+            button.imageEdgeInsets = UIEdgeInsets(top: -15, left: 0, bottom: 0, right: 0)
+            button.titleEdgeInsets = UIEdgeInsets(top: 30, left: -30, bottom: -30, right: 0)
         }
         
+        // Setup bottom bar
+        let bottomBar = UIView()
+        bottomBar.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+        bottomBar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(bottomBar)
+        view.addSubview(bottomButtonStackView)
+        
         NSLayoutConstraint.activate([
+            bottomBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            bottomBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bottomBar.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            bottomBar.heightAnchor.constraint(equalToConstant: 100),
+            
             bottomButtonStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            bottomButtonStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40.0),
+            bottomButtonStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
             bottomButtonStackView.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, multiplier: 0.8)
         ])
+        
+        // Add actions
+        airDropButton.addTarget(self, action: #selector(sharePreviewPressed(_:)), for: .touchUpInside)
+        printButton.addTarget(self, action: #selector(printButtonPressed(_:)), for: .touchUpInside)
+        qrCodeButton.addTarget(self, action: #selector(qrCodeButtonPressed(_:)), for: .touchUpInside)
     }
 
     @objc

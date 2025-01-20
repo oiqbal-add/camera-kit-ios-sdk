@@ -534,11 +534,9 @@ extension CameraViewController: CameraButtonDelegate {
                 self.cameraController.restoreBrightnessIfNecessary()
                 let viewController = ImagePreviewViewController(image: image)
                 viewController.snapchatDelegate = self.cameraController.snapchatDelegate
-                viewController.presentationController?.delegate = self
-                viewController.onDismiss = { [weak self] in
-                    self?.cameraController.increaseBrightnessIfNecessary()
-                }
-                // Present without clearing the lens
+                viewController.modalPresentationStyle = .formSheet
+                viewController.preferredContentSize = CGSize(width: UIScreen.main.bounds.width * 0.75,
+                                                           height: UIScreen.main.bounds.height * 0.7)
                 self.present(viewController, animated: true)
             }
         }

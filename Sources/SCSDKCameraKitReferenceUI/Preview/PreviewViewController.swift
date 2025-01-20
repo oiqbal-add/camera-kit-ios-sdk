@@ -56,18 +56,34 @@ public class PreviewViewController: UIViewController {
         button.accessibilityIdentifier = PreviewElements.shareButton.id
         button.setImage(UIImage(named: "ck_share", in: BundleHelper.resourcesBundle, compatibleWith: nil), for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
 
+    fileprivate let printButton: UIButton = {
+        let button = UIButton()
+        button.accessibilityIdentifier = "PrintButton"
+        button.setImage(UIImage(systemName: "printer"), for: .normal)
+        button.tintColor = .white
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
+    fileprivate let qrCodeButton: UIButton = {
+        let button = UIButton()
+        button.accessibilityIdentifier = "QRCodeButton"
+        button.setImage(UIImage(systemName: "qrcode"), for: .normal)
+        button.tintColor = .white
+        button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
     fileprivate lazy var bottomButtonStackView: UIStackView = {
-        let stackView = UIStackView(arrangedSubviews: [snapchatButton, saveButton, shareButton])
+        let stackView = UIStackView(arrangedSubviews: [shareButton, printButton, qrCodeButton])
         stackView.alignment = .center
         stackView.axis = .horizontal
-        stackView.distribution = .fill
-        stackView.spacing = 20.0
+        stackView.distribution = .equalCentering
+        stackView.spacing = 70.0
         stackView.translatesAutoresizingMaskIntoConstraints = false
-
         return stackView
     }()
 
@@ -100,6 +116,16 @@ public class PreviewViewController: UIViewController {
     open func sharePreviewPressed(_ sender: UIButton) {
         fatalError("share preview action has to be implemented by subclass")
     }
+
+    @objc
+    open func printButtonPressed(_ sender: UIButton) {
+        fatalError("print action has to be implemented by subclass")
+    }
+
+    @objc
+    open func qrCodeButtonPressed(_ sender: UIButton) {
+        fatalError("QR code action has to be implemented by subclass")
+    }
 }
 
 // MARK: Close Button
@@ -125,13 +151,24 @@ extension PreviewViewController {
 
 extension PreviewViewController {
     private func setupBottomButtonBar() {
-        snapchatButton.addTarget(self, action: #selector(openSnapchatPressed(_:)), for: .touchUpInside)
-        saveButton.addTarget(self, action: #selector(savePreviewPressed(_:)), for: .touchUpInside)
         shareButton.addTarget(self, action: #selector(sharePreviewPressed(_:)), for: .touchUpInside)
+        printButton.addTarget(self, action: #selector(printButtonPressed(_:)), for: .touchUpInside)
+        qrCodeButton.addTarget(self, action: #selector(qrCodeButtonPressed(_:)), for: .touchUpInside)
+        
         view.addSubview(bottomButtonStackView)
+        
+        // Make buttons bigger
+        [shareButton, printButton, qrCodeButton].forEach { button in
+            NSLayoutConstraint.activate([
+                button.widthAnchor.constraint(equalToConstant: 80),
+                button.heightAnchor.constraint(equalToConstant: 80)
+            ])
+        }
+        
         NSLayoutConstraint.activate([
-            bottomButtonStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16.0),
-            bottomButtonStackView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -32.0),
+            bottomButtonStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            bottomButtonStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40.0),
+            bottomButtonStackView.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, multiplier: 0.8)
         ])
     }
 

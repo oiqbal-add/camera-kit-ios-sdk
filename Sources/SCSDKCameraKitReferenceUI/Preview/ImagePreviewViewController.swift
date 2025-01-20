@@ -137,14 +137,16 @@ public class ImagePreviewViewController: PreviewViewController {
     }
 
     private func uploadImage(completion: @escaping (Result<String, Error>) -> Void) {
+        let uploadURL = URL(string: "https://image-upload-worker.glxss.workers.dev")!
+        
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
             completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to data"])))
             return
         }
         
-        let url = URL(string: "https://image-upload-worker.glxss.workers.dev")!
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: uploadURL)
         request.httpMethod = "POST"
+        request.timeoutInterval = 30
         
         let boundary = UUID().uuidString
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
@@ -158,27 +160,44 @@ public class ImagePreviewViewController: PreviewViewController {
         
         request.httpBody = body
         
+        print("Attempting upload to: \(uploadURL.absoluteString)")
+        
         URLSession.shared.dataTask(with: request) { data, response, error in
+            // Log response for debugging
+            if let httpResponse = response as? HTTPURLResponse {
+                print("Response status code: \(httpResponse.statusCode)")
+                print("Response headers: \(httpResponse.allHeaderFields)")
+            }
+            
             if let error = error {
+                print("Network error: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
             }
             
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let url = json["url"] as? String else {
-                completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server response"])))
-                return
+            if let data = data {
+                let responseString = String(data: data, encoding: .utf8) ?? "No response data"
+                print("Response data: \(responseString)")
+                
+                // Parse the response
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let success = json["success"] as? Bool,
+                   success,
+                   let url = json["url"] as? String {
+                    print("Successfully got URL: \(url)")
+                    completion(.success(url))
+                    return
+                }
+                
+                completion(.failure(NSError(domain: "", code: -1, 
+                    userInfo: [NSLocalizedDescriptionKey: "Invalid server response: \(responseString)"])))
             }
-            
-            completion(.success(url))
         }.resume()
     }
     
     private func showQRCode(for url: String) {
         let qrGenerator = CIFilter.qrCodeGenerator()
         
-        // Safely unwrap the message data
         guard let messageData = url.data(using: .utf8) else {
             showError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to generate QR code"]))
             return
@@ -203,7 +222,9 @@ public class ImagePreviewViewController: PreviewViewController {
         let qrUIImage = UIImage(cgImage: cgImage)
         
         // Create and show QR code view
-        let qrAlert = UIAlertController(title: "Scan QR Code", message: "Scan this code to view the image", preferredStyle: .alert)
+        let qrAlert = UIAlertController(title: "Scan QR Code", 
+                                      message: "Scan this code to view the image", 
+                                      preferredStyle: .alert)
         
         // Add QR code image view
         let imageView = UIImageView(image: qrUIImage)

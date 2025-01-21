@@ -65,7 +65,7 @@ public class ImagePreviewViewController: PreviewViewController {
     // MARK: Setup
 
     private func setupUI() {
-        view.backgroundColor = .clear // Changed from black with alpha
+        view.backgroundColor = .clear
         
         // Create frosted glass effect
         let blurEffect = UIBlurEffect(style: .systemMaterialDark)
@@ -75,6 +75,23 @@ public class ImagePreviewViewController: PreviewViewController {
         blurView.layer.cornerRadius = 24
         blurView.clipsToBounds = true
         view.addSubview(blurView)
+        
+        // Setup image view with consistent corner radius
+        imageView.contentMode = .scaleAspectFit
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 20
+        imageView.layer.masksToBounds = true
+        
+        // Create a container view for the image to maintain corner radius
+        let imageContainer = UIView()
+        imageContainer.backgroundColor = .clear
+        imageContainer.translatesAutoresizingMaskIntoConstraints = false
+        imageContainer.clipsToBounds = true
+        imageContainer.layer.cornerRadius = 20
+        view.addSubview(imageContainer)
+        
+        // Add image view to container
+        imageContainer.addSubview(imageView)
         
         // Setup close button
         let closeButton = UIButton()
@@ -86,13 +103,6 @@ public class ImagePreviewViewController: PreviewViewController {
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         closeButton.addTarget(self, action: #selector(closeButtonPressed), for: .touchUpInside)
         view.addSubview(closeButton)
-        
-        // Setup image view
-        imageView.contentMode = .scaleAspectFit
-        imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 20
-        imageView.layer.masksToBounds = true
-        view.addSubview(imageView)
         
         // Setup button stack
         let buttonStack = UIStackView()
@@ -142,21 +152,17 @@ public class ImagePreviewViewController: PreviewViewController {
             closeButton.widthAnchor.constraint(equalToConstant: 32),
             closeButton.heightAnchor.constraint(equalToConstant: 32),
             
-            // Image view constraints - centered with proper aspect ratio
-            imageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            imageView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -40),
+            // Image container constraints - use these instead of direct imageView constraints
+            imageContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            imageContainer.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -40),
+            imageContainer.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.85),
+            imageContainer.heightAnchor.constraint(equalTo: imageContainer.widthAnchor, multiplier: image.size.height / image.size.width),
             
-            // Dynamic width constraint based on orientation
-            imageView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.85),
-            
-            // Maintain aspect ratio
-            imageView.heightAnchor.constraint(equalTo: imageView.widthAnchor, multiplier: image.size.height / image.size.width),
-            
-            // Safe area constraints with consistent padding
-            imageView.topAnchor.constraint(greaterThanOrEqualTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
-            imageView.bottomAnchor.constraint(lessThanOrEqualTo: buttonStack.topAnchor, constant: -30),
-            imageView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
-            imageView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -20),
+            // Image view constraints within container
+            imageView.topAnchor.constraint(equalTo: imageContainer.topAnchor),
+            imageView.leadingAnchor.constraint(equalTo: imageContainer.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: imageContainer.trailingAnchor),
+            imageView.bottomAnchor.constraint(equalTo: imageContainer.bottomAnchor),
             
             // Button stack constraints
             buttonStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
@@ -179,7 +185,7 @@ public class ImagePreviewViewController: PreviewViewController {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
         
-        // Create vertical stack view for perfect alignment
+        // Create stack view for perfect alignment
         let stackView = UIStackView()
         stackView.axis = .vertical
         stackView.alignment = .center
@@ -188,21 +194,20 @@ public class ImagePreviewViewController: PreviewViewController {
         
         // Configure icon
         let iconConfig = UIImage.SymbolConfiguration(pointSize: 28, weight: .medium)
-        let iconImage = UIImage(systemName: icon, withConfiguration: iconConfig)
-        let iconImageView = UIImageView(image: iconImage)
+        let iconImageView = UIImageView(image: UIImage(systemName: icon, withConfiguration: iconConfig))
         iconImageView.contentMode = .scaleAspectFit
         iconImageView.tintColor = .white
         
-        // Configure title label
-        let titleLabel = UILabel()
-        titleLabel.text = title
-        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = .white
-        titleLabel.textAlignment = .center
+        // Configure label
+        let label = UILabel()
+        label.text = title
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        label.textColor = .white
+        label.textAlignment = .center
         
         // Add to stack view
         stackView.addArrangedSubview(iconImageView)
-        stackView.addArrangedSubview(titleLabel)
+        stackView.addArrangedSubview(label)
         
         // Add stack view to button
         button.addSubview(stackView)
@@ -211,15 +216,15 @@ public class ImagePreviewViewController: PreviewViewController {
         NSLayoutConstraint.activate([
             stackView.centerXAnchor.constraint(equalTo: button.centerXAnchor),
             stackView.centerYAnchor.constraint(equalTo: button.centerYAnchor),
-            button.heightAnchor.constraint(greaterThanOrEqualToConstant: 60),
-            button.widthAnchor.constraint(greaterThanOrEqualToConstant: 60)
+            stackView.leadingAnchor.constraint(greaterThanOrEqualTo: button.leadingAnchor, constant: 8),
+            stackView.trailingAnchor.constraint(lessThanOrEqualTo: button.trailingAnchor, constant: -8),
+            button.heightAnchor.constraint(greaterThanOrEqualToConstant: 80),
+            button.widthAnchor.constraint(greaterThanOrEqualToConstant: 80)
         ])
         
-        // Add shadow
-        button.layer.shadowColor = UIColor.black.cgColor
-        button.layer.shadowOffset = CGSize(width: 0, height: 2)
-        button.layer.shadowRadius = 4
-        button.layer.shadowOpacity = 0.2
+        // Make sure the entire button is tappable
+        button.isUserInteractionEnabled = true
+        stackView.isUserInteractionEnabled = false
         
         return button
     }

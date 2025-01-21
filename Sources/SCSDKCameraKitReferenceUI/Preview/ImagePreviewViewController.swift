@@ -23,7 +23,7 @@ public class ImagePreviewViewController: PreviewViewController {
 
     // Add timer property
     private var inactivityTimer: Timer?
-    private let inactivityTimeout: TimeInterval = 15.0
+    private let inactivityTimeout: TimeInterval = 60.0
 
     // Add property to track QR code view controller
     private weak var activeQRViewController: UIViewController?
@@ -43,7 +43,7 @@ public class ImagePreviewViewController: PreviewViewController {
     }
 
     override public func viewDidLoad() {
-        super.viewDidLoad()
+        // Don't call super.viewDidLoad() since we want to completely override the parent's setup
         modalPresentationStyle = .overFullScreen
         setupUI()
         startInactivityTimer()
@@ -65,99 +65,55 @@ public class ImagePreviewViewController: PreviewViewController {
     // MARK: Setup
 
     private func setupUI() {
-        view.insertSubview(imageView, at: 0)
+        view.backgroundColor = .clear // Changed from black with alpha
         
-        let bottomAnchor = view.safeAreaLayoutGuide.bottomAnchor
+        // Create frosted glass effect
+        let blurEffect = UIBlurEffect(style: .systemMaterialDark)
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.frame = view.bounds
+        blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        blurView.layer.cornerRadius = 24
+        blurView.clipsToBounds = true
+        view.addSubview(blurView)
         
-        // Create bottom bar background first
-        let bottomBarBackground = UIView()
-        bottomBarBackground.backgroundColor = UIColor.black.withAlphaComponent(0.8)
-        bottomBarBackground.translatesAutoresizingMaskIntoConstraints = false
-        view.insertSubview(bottomBarBackground, at: 1)
+        // Setup close button
+        let closeButton = UIButton()
+        closeButton.setImage(
+            UIImage(named: "ck_close_x", in: BundleHelper.resourcesBundle, compatibleWith: nil), 
+            for: .normal
+        )
+        closeButton.tintColor = .white
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.addTarget(self, action: #selector(closeButtonPressed), for: .touchUpInside)
+        view.addSubview(closeButton)
         
-        NSLayoutConstraint.activate([
-            bottomBarBackground.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            bottomBarBackground.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            bottomBarBackground.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            bottomBarBackground.heightAnchor.constraint(equalToConstant: 140)
-        ])
-        
-        // Setup image view with proper aspect ratio
+        // Setup image view
         imageView.contentMode = .scaleAspectFit
         imageView.clipsToBounds = true
-        NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
-            imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            imageView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            imageView.bottomAnchor.constraint(equalTo: bottomBarBackground.topAnchor, constant: -20)
-        ])
+        imageView.layer.cornerRadius = 20
+        imageView.layer.masksToBounds = true
+        view.addSubview(imageView)
         
-        // Clear existing buttons
-        bottomButtonStackView.subviews.forEach { $0.removeFromSuperview() }
+        // Setup button stack
+        let buttonStack = UIStackView()
+        buttonStack.axis = .horizontal
+        buttonStack.distribution = .equalSpacing
+        buttonStack.alignment = .center
+        buttonStack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(buttonStack)
         
-        // Configure buttons
-        let buttonConfigs: [(String, String)] = [
-            ("AirDrop", "square.and.arrow.up.fill"),
-            ("Print", "printer.fill"),
-            ("QR Code", "qrcode")
+        // Configure action buttons
+        let buttonConfigs: [(String, String, UIColor)] = [
+            ("AirDrop", "square.and.arrow.up.fill", UIColor(red: 0.53, green: 0.44, blue: 0.95, alpha: 1)),  // Purple
+            ("Print", "printer.fill", UIColor(red: 0.75, green: 0.45, blue: 0.7, alpha: 1)),  // Mid gradient
+            ("QR Code", "qrcode", UIColor(red: 0.98, green: 0.45, blue: 0.45, alpha: 1))  // Orange-Pink
         ]
         
-        buttonConfigs.forEach { (title, iconName) in
-            // Create container stack view for each button
-            let buttonStack = UIStackView()
-            buttonStack.axis = .vertical
-            buttonStack.alignment = .center
-            buttonStack.spacing = 8
-            buttonStack.translatesAutoresizingMaskIntoConstraints = false
+        buttonConfigs.forEach { (title, iconName, _) in
+            let button = createActionButton(icon: iconName, title: title, color: .white)
+            buttonStack.addArrangedSubview(button)
             
-            // Create and configure icon
-            let iconConfig = UIImage.SymbolConfiguration(pointSize: 32, weight: .medium)
-            let icon = UIImage(systemName: iconName, withConfiguration: iconConfig)
-            
-            let iconView = UIImageView(image: icon)
-            iconView.contentMode = .scaleAspectFit
-            iconView.tintColor = .white
-            
-            // Create and configure label
-            let label = UILabel()
-            label.text = title
-            label.font = .systemFont(ofSize: 12, weight: .medium)
-            label.textColor = .white
-            label.textAlignment = .center
-            
-            // Add views to stack
-            buttonStack.addArrangedSubview(iconView)
-            buttonStack.addArrangedSubview(label)
-            
-            // Create button that covers the entire stack
-            let button = UIButton(type: .system)
-            button.translatesAutoresizingMaskIntoConstraints = false
-            
-            // Wrap stack view in a container with the button
-            let container = UIView()
-            container.translatesAutoresizingMaskIntoConstraints = false
-            container.addSubview(buttonStack)
-            container.addSubview(button)
-            
-            // Set constraints
-            NSLayoutConstraint.activate([
-                iconView.widthAnchor.constraint(equalToConstant: 32),
-                iconView.heightAnchor.constraint(equalToConstant: 32),
-                
-                buttonStack.topAnchor.constraint(equalTo: container.topAnchor),
-                buttonStack.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-                buttonStack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-                
-                button.topAnchor.constraint(equalTo: container.topAnchor),
-                button.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-                button.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-                button.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-                
-                container.widthAnchor.constraint(equalToConstant: 80),
-                container.heightAnchor.constraint(equalToConstant: 80)
-            ])
-            
-            // Add tap handler
+            // Add tap handlers
             switch title {
             case "AirDrop":
                 button.addTarget(self, action: #selector(airDropButtonPressed(_:)), for: .touchUpInside)
@@ -169,28 +125,91 @@ public class ImagePreviewViewController: PreviewViewController {
                 break
             }
             
-            // Add highlight effect
+            // Add highlight effects
             button.addTarget(self, action: #selector(buttonTouchDown(_:)), for: .touchDown)
-            button.addTarget(self, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside])
-            
-            // Add to main stack view
-            bottomButtonStackView.addArrangedSubview(container)
+            button.addTarget(self, action: #selector(buttonTouchUp(_:)), for: .touchUpInside)
         }
         
-        // Configure main stack view
-        bottomButtonStackView.spacing = 50
-        bottomButtonStackView.distribution = .equalSpacing
-        bottomButtonStackView.alignment = .center
+        // Add copyright label
+        let copyrightLabel = UILabel()
+        copyrightLabel.text = "© PicPop"
+        copyrightLabel.font = .systemFont(ofSize: 12, weight: .semibold)
+        copyrightLabel.textColor = .white
+        copyrightLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(copyrightLabel)
         
+        // Setup constraints
         NSLayoutConstraint.activate([
-            bottomButtonStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            bottomButtonStackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -30),
-            bottomButtonStackView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 40),
-            bottomButtonStackView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -40),
-            bottomButtonStackView.heightAnchor.constraint(equalToConstant: 80)
+            // Close button constraints - positioned relative to container view
+            closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            closeButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            closeButton.widthAnchor.constraint(equalToConstant: 32),
+            closeButton.heightAnchor.constraint(equalToConstant: 32),
+            
+            // Image view constraints - centered with proper aspect ratio
+            imageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            imageView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -40),
+            
+            // Dynamic width constraint based on orientation
+            imageView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.85),
+            
+            // Maintain aspect ratio
+            imageView.heightAnchor.constraint(equalTo: imageView.widthAnchor, multiplier: image.size.height / image.size.width),
+            
+            // Safe area constraints with consistent padding
+            imageView.topAnchor.constraint(greaterThanOrEqualTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
+            imageView.bottomAnchor.constraint(lessThanOrEqualTo: buttonStack.topAnchor, constant: -30),
+            imageView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
+            imageView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -20),
+            
+            // Button stack constraints
+            buttonStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
+            buttonStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
+            buttonStack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40),
+            
+            // Copyright label constraints - aligned with close button
+            copyrightLabel.centerYAnchor.constraint(equalTo: closeButton.centerYAnchor),
+            copyrightLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
         ])
         
-        view.backgroundColor = .black
+        // Ensure close button stays on top
+        view.bringSubviewToFront(closeButton)
+        
+        // Make sure copyright label stays on top
+        view.bringSubviewToFront(copyrightLabel)
+    }
+
+    private func createActionButton(icon: String, title: String, color: UIColor) -> UIButton {
+        let button = UIButton(type: .system)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Configure icon
+        let iconConfig = UIImage.SymbolConfiguration(pointSize: 28, weight: .medium)
+        let iconImage = UIImage(systemName: icon, withConfiguration: iconConfig)
+        button.setImage(iconImage, for: .normal)
+        button.tintColor = .white
+        
+        // Configure title
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 13, weight: .semibold)
+        
+        // Add shadow
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 2)
+        button.layer.shadowRadius = 4
+        button.layer.shadowOpacity = 0.2
+        
+        // Setup vertical layout
+        button.centerImageAndButton(spacing: 8)
+        
+        // Set minimum touch target size
+        NSLayoutConstraint.activate([
+            button.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            button.widthAnchor.constraint(greaterThanOrEqualToConstant: 44)
+        ])
+        
+        return button
     }
 
     @objc private func buttonTapped(_ sender: UIButton) {
@@ -312,24 +331,26 @@ public class ImagePreviewViewController: PreviewViewController {
         present(activityVC, animated: true)
     }
 
-    override public func printButtonPressed(_ sender: UIButton) {
+    @objc override public func printButtonPressed(_ sender: UIButton) {
         userDidInteract()
+        
         let printController = UIPrintInteractionController.shared
         let printInfo = UIPrintInfo(dictionary: nil)
         printInfo.outputType = .photo
-        printInfo.jobName = "Print Photo"
+        printInfo.jobName = "PicPop Photo"
         
         printController.printInfo = printInfo
         printController.printingItem = image
         
-        printController.present(animated: true) { _, _, error in
-            if let error = error {
-                print("Printing error: \(error.localizedDescription)")
-            }
+        // Present as popover on iPad, modal on iPhone
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            printController.present(from: sender.bounds, in: sender, animated: true)
+        } else {
+            printController.present(from: sender.bounds, in: sender, animated: true)
         }
     }
 
-    override public func qrCodeButtonPressed(_ sender: UIButton) {
+    @objc override public func qrCodeButtonPressed(_ sender: UIButton) {
         userDidInteract()
         // Show loading indicator
         let loadingAlert = UIAlertController(title: "Generating...", message: "Please wait", preferredStyle: .alert)
@@ -374,46 +395,29 @@ public class ImagePreviewViewController: PreviewViewController {
         
         request.httpBody = body
         
-        print("Attempting upload to: \(uploadURL.absoluteString)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
-            // Log response for debugging
-            if let httpResponse = response as? HTTPURLResponse {
-                print("Response status code: \(httpResponse.statusCode)")
-                print("Response headers: \(httpResponse.allHeaderFields)")
-            }
-            
             if let error = error {
-                print("Network error: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
             }
             
-            if let data = data {
-                let responseString = String(data: data, encoding: .utf8) ?? "No response data"
-                print("Response data: \(responseString)")
-                
-                // Parse the response
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let success = json["success"] as? Bool,
-                   success,
-                   let url = json["url"] as? String {
-                    print("Successfully got URL: \(url)")
-                    completion(.success(url))
-                    return
-                }
-                
-                completion(.failure(NSError(domain: "", code: -1, 
-                    userInfo: [NSLocalizedDescriptionKey: "Invalid server response: \(responseString)"])))
+            if let data = data,
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let success = json["success"] as? Bool,
+               success,
+               let url = json["url"] as? String {
+                completion(.success(url))
+            } else {
+                completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server response"])))
             }
         }.resume()
     }
-    
+
     private func showQRCode(for url: String) {
         let qrVC = UIViewController()
-        qrVC.view.backgroundColor = .black
+        qrVC.view.backgroundColor = .clear
         qrVC.modalPresentationStyle = .formSheet
-        qrVC.preferredContentSize = CGSize(width: 350, height: 450) // Fixed size for better presentation
+        qrVC.preferredContentSize = CGSize(width: 350, height: 450)
         
         // Create QR code
         let qrGenerator = CIFilter.qrCodeGenerator()
@@ -435,7 +439,7 @@ public class ImagePreviewViewController: PreviewViewController {
         
         // Main container for all content
         let mainContainer = UIView()
-        mainContainer.backgroundColor = UIColor(white: 0.1, alpha: 1.0) // Dark gray background
+        mainContainer.backgroundColor = UIColor(white: 0.1, alpha: 1.0)
         mainContainer.layer.cornerRadius = 25
         mainContainer.translatesAutoresizingMaskIntoConstraints = false
         qrVC.view.addSubview(mainContainer)
@@ -468,31 +472,25 @@ public class ImagePreviewViewController: PreviewViewController {
         instructionsLabel.translatesAutoresizingMaskIntoConstraints = false
         mainContainer.addSubview(instructionsLabel)
         
-        // Layout
         NSLayoutConstraint.activate([
-            // Main container
             mainContainer.centerXAnchor.constraint(equalTo: qrVC.view.centerXAnchor),
             mainContainer.centerYAnchor.constraint(equalTo: qrVC.view.centerYAnchor),
             mainContainer.widthAnchor.constraint(equalToConstant: 300),
             mainContainer.heightAnchor.constraint(equalToConstant: 400),
             
-            // Title
             titleLabel.topAnchor.constraint(equalTo: mainContainer.topAnchor, constant: 25),
             titleLabel.centerXAnchor.constraint(equalTo: mainContainer.centerXAnchor),
             
-            // QR Container
             qrContainer.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 25),
             qrContainer.centerXAnchor.constraint(equalTo: mainContainer.centerXAnchor),
             qrContainer.widthAnchor.constraint(equalToConstant: 250),
             qrContainer.heightAnchor.constraint(equalToConstant: 250),
             
-            // QR Image
             imageView.topAnchor.constraint(equalTo: qrContainer.topAnchor, constant: 15),
             imageView.leadingAnchor.constraint(equalTo: qrContainer.leadingAnchor, constant: 15),
             imageView.trailingAnchor.constraint(equalTo: qrContainer.trailingAnchor, constant: -15),
             imageView.bottomAnchor.constraint(equalTo: qrContainer.bottomAnchor, constant: -15),
             
-            // Instructions
             instructionsLabel.topAnchor.constraint(equalTo: qrContainer.bottomAnchor, constant: 25),
             instructionsLabel.centerXAnchor.constraint(equalTo: mainContainer.centerXAnchor)
         ])
@@ -501,12 +499,10 @@ public class ImagePreviewViewController: PreviewViewController {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(userDidInteract))
         qrVC.view.addGestureRecognizer(tapGesture)
         
-        // Store reference to QR view controller
         activeQRViewController = qrVC
-        
         present(qrVC, animated: true)
     }
-    
+
     private func showError(_ error: Error) {
         let alert = UIAlertController(
             title: "Upload Failed",
@@ -549,12 +545,42 @@ public class ImagePreviewViewController: PreviewViewController {
         // First dismiss QR code if it's showing
         if let qrVC = activeQRViewController {
             qrVC.dismiss(animated: true) { [weak self] in
-                self?.onDismiss?()
-                self?.dismiss(animated: true)
+                guard let self = self else { return }
+                
+                // Then handle the main preview dismissal
+                if let containerView = self.view.superview,
+                   let blurView = containerView.subviews.first(where: { $0 is UIVisualEffectView }) {
+                    // Fade out blur first
+                    UIView.animate(withDuration: 0.2, animations: {
+                        blurView.alpha = 0
+                    }) { _ in
+                        // Then dismiss with animation (slides down)
+                        self.onDismiss?()
+                        self.dismiss(animated: true)
+                    }
+                } else {
+                    // Fallback if blur view not found
+                    self.onDismiss?()
+                    self.dismiss(animated: true)
+                }
             }
         } else {
-            onDismiss?()
-            dismiss(animated: true)
+            // No QR code showing, handle main preview dismissal directly
+            if let containerView = view.superview,
+               let blurView = containerView.subviews.first(where: { $0 is UIVisualEffectView }) {
+                // Fade out blur first
+                UIView.animate(withDuration: 0.2, animations: {
+                    blurView.alpha = 0
+                }) { _ in
+                    // Then dismiss with animation (slides down)
+                    self.onDismiss?()
+                    self.dismiss(animated: true)
+                }
+            } else {
+                // Fallback if blur view not found
+                onDismiss?()
+                dismiss(animated: true)
+            }
         }
     }
     
@@ -566,6 +592,25 @@ public class ImagePreviewViewController: PreviewViewController {
     override public func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         userDidInteract()
         super.present(viewControllerToPresent, animated: flag, completion: completion)
+    }
+
+    @objc private func closeButtonPressed() {
+        // Find the blur view in our parent container
+        if let containerView = view.superview,
+           let blurView = containerView.subviews.first(where: { $0 is UIVisualEffectView }) {
+            // First fade out the blur
+            UIView.animate(withDuration: 0.2, animations: {
+                blurView.alpha = 0
+            }) { _ in
+                // Then dismiss with animation (slides down)
+                self.onDismiss?()
+                self.dismiss(animated: true)
+            }
+        } else {
+            // Fallback if blur view not found
+            onDismiss?()
+            dismiss(animated: true)
+        }
     }
 }
 
@@ -595,5 +640,12 @@ extension UIButton {
             bottom: -(totalHeight - titleSize.height),
             right: 0
         )
+    }
+}
+
+extension NSLayoutConstraint {
+    func with(priority: UILayoutPriority) -> NSLayoutConstraint {
+        self.priority = priority
+        return self
     }
 }

@@ -536,17 +536,29 @@ extension CameraViewController: CameraButtonDelegate {
                 // Create a container view controller
                 let containerVC = UIViewController()
                 containerVC.modalPresentationStyle = .overCurrentContext
-                containerVC.view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+                
+                // Create blur effect for background
+                let backgroundBlurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+                backgroundBlurView.frame = containerVC.view.bounds
+                backgroundBlurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                backgroundBlurView.alpha = 0
+                containerVC.view.addSubview(backgroundBlurView)
                 
                 // Create and setup the image preview controller
                 let previewVC = ImagePreviewViewController(image: image)
                 previewVC.snapchatDelegate = self.cameraController.snapchatDelegate
-                previewVC.view.backgroundColor = .black
                 
                 // Add preview controller as child
                 containerVC.addChild(previewVC)
                 containerVC.view.addSubview(previewVC.view)
                 previewVC.view.translatesAutoresizingMaskIntoConstraints = false
+                
+                // Add shadow to preview panel
+                previewVC.view.layer.shadowColor = UIColor.black.cgColor
+                previewVC.view.layer.shadowOffset = CGSize(width: 0, height: 4)
+                previewVC.view.layer.shadowRadius = 20
+                previewVC.view.layer.shadowOpacity = 0.4
+                previewVC.view.layer.masksToBounds = false
                 
                 // Calculate container size
                 let screenSize = UIScreen.main.bounds.size
@@ -557,23 +569,24 @@ extension CameraViewController: CameraButtonDelegate {
                     previewVC.view.centerXAnchor.constraint(equalTo: containerVC.view.centerXAnchor),
                     previewVC.view.centerYAnchor.constraint(equalTo: containerVC.view.centerYAnchor),
                     previewVC.view.widthAnchor.constraint(equalToConstant: 
-                        UIDevice.current.orientation.isLandscape ? baseWidth * 0.8 : baseWidth * 0.55),
+                        UIDevice.current.orientation.isLandscape ? baseWidth * 0.8 : baseWidth * 0.6),
                     previewVC.view.heightAnchor.constraint(equalToConstant: 
-                        UIDevice.current.orientation.isLandscape ? baseWidth * 0.75 : baseWidth * 0.85),
+                        UIDevice.current.orientation.isLandscape ? baseWidth * 0.7 : baseWidth * 0.9)
                 ])
-                
-                previewVC.view.layer.cornerRadius = 16
-                previewVC.view.clipsToBounds = true
                 
                 // Add tap gesture to dismiss
                 let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.dismissPreview(_:)))
                 tapGesture.delegate = self
                 containerVC.view.addGestureRecognizer(tapGesture)
                 
-                previewVC.didMove(toParent: containerVC)
+                // Present with fade animation
+                self.present(containerVC, animated: false) {
+                    UIView.animate(withDuration: 0.3) {
+                        backgroundBlurView.alpha = 1
+                    }
+                }
                 
-                // Present the container
-                self.present(containerVC, animated: true)
+                previewVC.didMove(toParent: containerVC)
             }
         }
     }
@@ -725,18 +738,31 @@ private extension CameraViewController {
     }
 }
 
-// Add gesture recognizer delegate method
+// Update the gesture recognizer delegate method
 extension CameraViewController: UIGestureRecognizerDelegate {
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-        // Only handle taps on the container view, not its subviews (the preview)
-        return touch.view == gestureRecognizer.view
+        guard let touchView = touch.view else { return false }
+        
+        // Allow if tap is on container view or blur view
+        return touchView == gestureRecognizer.view || touchView is UIVisualEffectView
     }
 }
 
-// Add dismiss method
+// Update dismiss method
 extension CameraViewController {
     @objc private func dismissPreview(_ gesture: UITapGestureRecognizer) {
-        gesture.view?.viewController?.dismiss(animated: true)
+        guard let containerView = gesture.view else { return }
+        
+        let blurView = containerView.subviews.first { $0 is UIVisualEffectView }
+        let previewVC = containerView.subviews.first { $0 is PreviewViewController }
+        
+        // First fade out only the blur
+        UIView.animate(withDuration: 0.2, animations: {
+            blurView?.alpha = 0
+        }) { _ in
+            // Then dismiss the container with animation (slides down)
+            containerView.viewController?.dismiss(animated: true)
+        }
     }
 }
 

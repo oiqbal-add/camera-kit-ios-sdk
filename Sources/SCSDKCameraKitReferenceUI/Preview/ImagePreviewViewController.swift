@@ -23,7 +23,7 @@ public class ImagePreviewViewController: PreviewViewController {
 
     // Add timer property
     private var inactivityTimer: Timer?
-    private let inactivityTimeout: TimeInterval = 5.0 // 5 seconds
+    private let inactivityTimeout: TimeInterval = 120.0 // 2 minutes
 
     // Add property to track QR code view controller
     private weak var activeQRViewController: UIViewController?

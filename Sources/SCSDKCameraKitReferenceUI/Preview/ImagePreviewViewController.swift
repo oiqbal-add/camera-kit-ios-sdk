@@ -131,11 +131,7 @@ public class ImagePreviewViewController: PreviewViewController {
         }
         
         // Add copyright label
-        let copyrightLabel = UILabel()
-        copyrightLabel.text = "© PicPop"
-        copyrightLabel.font = .systemFont(ofSize: 12, weight: .semibold)
-        copyrightLabel.textColor = .white
-        copyrightLabel.translatesAutoresizingMaskIntoConstraints = false
+        let copyrightLabel = setupGradientCopyrightLabel()
         view.addSubview(copyrightLabel)
         
         // Setup constraints
@@ -183,31 +179,47 @@ public class ImagePreviewViewController: PreviewViewController {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
         
+        // Create vertical stack view for perfect alignment
+        let stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.alignment = .center
+        stackView.spacing = 8
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        
         // Configure icon
         let iconConfig = UIImage.SymbolConfiguration(pointSize: 28, weight: .medium)
         let iconImage = UIImage(systemName: icon, withConfiguration: iconConfig)
-        button.setImage(iconImage, for: .normal)
-        button.tintColor = .white
+        let iconImageView = UIImageView(image: iconImage)
+        iconImageView.contentMode = .scaleAspectFit
+        iconImageView.tintColor = .white
         
-        // Configure title
-        button.setTitle(title, for: .normal)
-        button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 13, weight: .semibold)
+        // Configure title label
+        let titleLabel = UILabel()
+        titleLabel.text = title
+        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.textColor = .white
+        titleLabel.textAlignment = .center
+        
+        // Add to stack view
+        stackView.addArrangedSubview(iconImageView)
+        stackView.addArrangedSubview(titleLabel)
+        
+        // Add stack view to button
+        button.addSubview(stackView)
+        
+        // Center stack view in button
+        NSLayoutConstraint.activate([
+            stackView.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+            stackView.centerYAnchor.constraint(equalTo: button.centerYAnchor),
+            button.heightAnchor.constraint(greaterThanOrEqualToConstant: 60),
+            button.widthAnchor.constraint(greaterThanOrEqualToConstant: 60)
+        ])
         
         // Add shadow
         button.layer.shadowColor = UIColor.black.cgColor
         button.layer.shadowOffset = CGSize(width: 0, height: 2)
         button.layer.shadowRadius = 4
         button.layer.shadowOpacity = 0.2
-        
-        // Setup vertical layout
-        button.centerImageAndButton(spacing: 8)
-        
-        // Set minimum touch target size
-        NSLayoutConstraint.activate([
-            button.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
-            button.widthAnchor.constraint(greaterThanOrEqualToConstant: 44)
-        ])
         
         return button
     }
@@ -611,6 +623,39 @@ public class ImagePreviewViewController: PreviewViewController {
             onDismiss?()
             dismiss(animated: true)
         }
+    }
+
+    private func setupGradientCopyrightLabel() -> UILabel {
+        let copyrightLabel = UILabel()
+        copyrightLabel.text = "© PicPop"
+        copyrightLabel.font = .systemFont(ofSize: 12, weight: .semibold)
+        copyrightLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Create gradient layer
+        let gradientLayer = CAGradientLayer()
+        gradientLayer.colors = [
+            UIColor(red: 0.53, green: 0.44, blue: 0.95, alpha: 1).cgColor,  // Purple
+            UIColor(red: 0.98, green: 0.45, blue: 0.45, alpha: 1).cgColor   // Pink-Orange
+        ]
+        gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
+        gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+        
+        // Make label act as mask for gradient
+        let textLayer = CATextLayer()
+        textLayer.string = copyrightLabel.text
+        textLayer.font = copyrightLabel.font
+        textLayer.fontSize = copyrightLabel.font.pointSize
+        textLayer.foregroundColor = UIColor.white.cgColor
+        
+        // Size the gradient to fit the text
+        let textSize = copyrightLabel.text?.size(withAttributes: [.font: copyrightLabel.font!]) ?? .zero
+        gradientLayer.frame = CGRect(origin: .zero, size: textSize)
+        textLayer.frame = gradientLayer.frame
+        
+        gradientLayer.mask = textLayer
+        copyrightLabel.layer.addSublayer(gradientLayer)
+        
+        return copyrightLabel
     }
 }
 

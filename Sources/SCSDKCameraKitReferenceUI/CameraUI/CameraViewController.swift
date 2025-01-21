@@ -532,12 +532,48 @@ extension CameraViewController: CameraButtonDelegate {
             guard let image else { return }
             DispatchQueue.main.async {
                 self.cameraController.restoreBrightnessIfNecessary()
-                let viewController = ImagePreviewViewController(image: image)
-                viewController.snapchatDelegate = self.cameraController.snapchatDelegate
-                viewController.modalPresentationStyle = .formSheet
-                viewController.preferredContentSize = CGSize(width: UIScreen.main.bounds.width * 0.75,
-                                                           height: UIScreen.main.bounds.height * 0.7)
-                self.present(viewController, animated: true)
+                
+                // Create a container view controller
+                let containerVC = UIViewController()
+                containerVC.modalPresentationStyle = .overCurrentContext
+                containerVC.view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+                
+                // Create and setup the image preview controller
+                let previewVC = ImagePreviewViewController(image: image)
+                previewVC.snapchatDelegate = self.cameraController.snapchatDelegate
+                previewVC.view.backgroundColor = .black
+                
+                // Add preview controller as child
+                containerVC.addChild(previewVC)
+                containerVC.view.addSubview(previewVC.view)
+                previewVC.view.translatesAutoresizingMaskIntoConstraints = false
+                
+                // Calculate container size
+                let screenSize = UIScreen.main.bounds.size
+                let baseWidth: CGFloat = min(screenSize.width, screenSize.height)
+                
+                // Center the preview and set its size constraints
+                NSLayoutConstraint.activate([
+                    previewVC.view.centerXAnchor.constraint(equalTo: containerVC.view.centerXAnchor),
+                    previewVC.view.centerYAnchor.constraint(equalTo: containerVC.view.centerYAnchor),
+                    previewVC.view.widthAnchor.constraint(equalToConstant: 
+                        UIDevice.current.orientation.isLandscape ? baseWidth * 0.8 : baseWidth * 0.55),
+                    previewVC.view.heightAnchor.constraint(equalToConstant: 
+                        UIDevice.current.orientation.isLandscape ? baseWidth * 0.75 : baseWidth * 0.85),
+                ])
+                
+                previewVC.view.layer.cornerRadius = 16
+                previewVC.view.clipsToBounds = true
+                
+                // Add tap gesture to dismiss
+                let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.dismissPreview(_:)))
+                tapGesture.delegate = self
+                containerVC.view.addGestureRecognizer(tapGesture)
+                
+                previewVC.didMove(toParent: containerVC)
+                
+                // Present the container
+                self.present(containerVC, animated: true)
             }
         }
     }
@@ -686,5 +722,34 @@ private extension CameraViewController {
         case .portraitUpsideDown: return .portraitUpsideDown
         @unknown default: return .portrait
         }
+    }
+}
+
+// Add gesture recognizer delegate method
+extension CameraViewController: UIGestureRecognizerDelegate {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        // Only handle taps on the container view, not its subviews (the preview)
+        return touch.view == gestureRecognizer.view
+    }
+}
+
+// Add dismiss method
+extension CameraViewController {
+    @objc private func dismissPreview(_ gesture: UITapGestureRecognizer) {
+        gesture.view?.viewController?.dismiss(animated: true)
+    }
+}
+
+// Helper extension to get the view controller from a view
+private extension UIView {
+    var viewController: UIViewController? {
+        var responder: UIResponder? = self
+        while let nextResponder = responder?.next {
+            if let viewController = nextResponder as? UIViewController {
+                return viewController
+            }
+            responder = nextResponder
+        }
+        return nil
     }
 }

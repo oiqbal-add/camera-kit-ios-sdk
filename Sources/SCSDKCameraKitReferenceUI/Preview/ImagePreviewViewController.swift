@@ -23,7 +23,7 @@ public class ImagePreviewViewController: PreviewViewController {
 
     // Add timer property
     private var inactivityTimer: Timer?
-    private let inactivityTimeout: TimeInterval = 60.0
+    private let inactivityTimeout: TimeInterval = 5.0 // 5 seconds
 
     // Add property to track QR code view controller
     private weak var activeQRViewController: UIViewController?
@@ -559,45 +559,33 @@ public class ImagePreviewViewController: PreviewViewController {
     }
     
     private func dismissDueToInactivity() {
-        // First dismiss QR code if it's showing
-        if let qrVC = activeQRViewController {
-            qrVC.dismiss(animated: true) { [weak self] in
+        // First dismiss any presented view controllers (QR code, Print, AirDrop)
+        if let presentedVC = presentedViewController {
+            presentedVC.dismiss(animated: true) { [weak self] in
                 guard let self = self else { return }
-                
-                // Then handle the main preview dismissal
-                if let containerView = self.view.superview,
-                   let blurView = containerView.subviews.first(where: { $0 is UIVisualEffectView }) {
-                    // Fade out blur first
-                    UIView.animate(withDuration: 0.2, animations: {
-                        blurView.alpha = 0
-                    }) { _ in
-                        // Then dismiss with animation (slides down)
-                        self.onDismiss?()
-                        self.dismiss(animated: true)
-                    }
-                } else {
-                    // Fallback if blur view not found
-                    self.onDismiss?()
-                    self.dismiss(animated: true)
-                }
+                self.dismissMainPreview()
             }
         } else {
-            // No QR code showing, handle main preview dismissal directly
-            if let containerView = view.superview,
-               let blurView = containerView.subviews.first(where: { $0 is UIVisualEffectView }) {
-                // Fade out blur first
-                UIView.animate(withDuration: 0.2, animations: {
-                    blurView.alpha = 0
-                }) { _ in
-                    // Then dismiss with animation (slides down)
-                    self.onDismiss?()
-                    self.dismiss(animated: true)
-                }
-            } else {
-                // Fallback if blur view not found
-                onDismiss?()
-                dismiss(animated: true)
+            dismissMainPreview()
+        }
+    }
+    
+    private func dismissMainPreview() {
+        // Handle the main preview dismissal
+        if let containerView = view.superview,
+           let blurView = containerView.subviews.first(where: { $0 is UIVisualEffectView }) {
+            // Fade out blur first
+            UIView.animate(withDuration: 0.2, animations: {
+                blurView.alpha = 0
+            }) { _ in
+                // Then dismiss with animation (slides down)
+                self.onDismiss?()
+                self.dismiss(animated: true)
             }
+        } else {
+            // Fallback if blur view not found
+            onDismiss?()
+            dismiss(animated: true)
         }
     }
     

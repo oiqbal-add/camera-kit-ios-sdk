@@ -21,6 +21,13 @@ public class ImagePreviewViewController: PreviewViewController {
         return view
     }()
 
+    // Add timer property
+    private var inactivityTimer: Timer?
+    private let inactivityTimeout: TimeInterval = 15.0
+
+    // Add property to track QR code view controller
+    private weak var activeQRViewController: UIViewController?
+
     // MARK: Init
 
     /// Designated init to pass in required deps
@@ -39,6 +46,20 @@ public class ImagePreviewViewController: PreviewViewController {
         super.viewDidLoad()
         modalPresentationStyle = .overFullScreen
         setupUI()
+        startInactivityTimer()
+        
+        // Add gesture recognizer to track user interaction
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(userDidInteract))
+        view.addGestureRecognizer(tapGesture)
+        
+        // Add pan gesture recognizer
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(userDidInteract))
+        view.addGestureRecognizer(panGesture)
+    }
+
+    override public func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        stopInactivityTimer()
     }
 
     // MARK: Setup
@@ -193,6 +214,7 @@ public class ImagePreviewViewController: PreviewViewController {
     }
 
     @objc private func airDropButtonPressed(_ sender: UIButton) {
+        userDidInteract()
         let activityVC = UIActivityViewController(
             activityItems: [image],
             applicationActivities: nil
@@ -252,10 +274,12 @@ public class ImagePreviewViewController: PreviewViewController {
     // MARK: Action Overrides
 
     override public func openSnapchatPressed(_ sender: UIButton) {
+        userDidInteract()
         snapchatDelegate?.cameraKitViewController(self, openSnapchat: .photo(image))
     }
 
     override public func sharePreviewPressed(_ sender: UIButton) {
+        userDidInteract()
         shareViaAirDrop()
     }
 
@@ -289,6 +313,7 @@ public class ImagePreviewViewController: PreviewViewController {
     }
 
     override public func printButtonPressed(_ sender: UIButton) {
+        userDidInteract()
         let printController = UIPrintInteractionController.shared
         let printInfo = UIPrintInfo(dictionary: nil)
         printInfo.outputType = .photo
@@ -305,8 +330,9 @@ public class ImagePreviewViewController: PreviewViewController {
     }
 
     override public func qrCodeButtonPressed(_ sender: UIButton) {
+        userDidInteract()
         // Show loading indicator
-        let loadingAlert = UIAlertController(title: "Uploading...", message: "Please wait", preferredStyle: .alert)
+        let loadingAlert = UIAlertController(title: "Generating...", message: "Please wait", preferredStyle: .alert)
         present(loadingAlert, animated: true)
         
         // Upload image
@@ -471,6 +497,13 @@ public class ImagePreviewViewController: PreviewViewController {
             instructionsLabel.centerXAnchor.constraint(equalTo: mainContainer.centerXAnchor)
         ])
         
+        // Add tap gesture to QR view to reset timer
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(userDidInteract))
+        qrVC.view.addGestureRecognizer(tapGesture)
+        
+        // Store reference to QR view controller
+        activeQRViewController = qrVC
+        
         present(qrVC, animated: true)
     }
     
@@ -486,15 +519,53 @@ public class ImagePreviewViewController: PreviewViewController {
 
     // Add these new methods for button highlighting
     @objc private func buttonTouchDown(_ sender: UIButton) {
+        userDidInteract()
         UIView.animate(withDuration: 0.1) {
             sender.alpha = 0.7
         }
     }
 
     @objc private func buttonTouchUp(_ sender: UIButton) {
+        userDidInteract()
         UIView.animate(withDuration: 0.1) {
             sender.alpha = 1.0
         }
+    }
+
+    // Add these new methods for inactivity timer
+    private func startInactivityTimer() {
+        stopInactivityTimer() // Stop existing timer if any
+        inactivityTimer = Timer.scheduledTimer(withTimeInterval: inactivityTimeout, repeats: false) { [weak self] _ in
+            self?.dismissDueToInactivity()
+        }
+    }
+    
+    private func stopInactivityTimer() {
+        inactivityTimer?.invalidate()
+        inactivityTimer = nil
+    }
+    
+    private func dismissDueToInactivity() {
+        // First dismiss QR code if it's showing
+        if let qrVC = activeQRViewController {
+            qrVC.dismiss(animated: true) { [weak self] in
+                self?.onDismiss?()
+                self?.dismiss(animated: true)
+            }
+        } else {
+            onDismiss?()
+            dismiss(animated: true)
+        }
+    }
+    
+    @objc public func userDidInteract() {
+        startInactivityTimer() // Reset timer on any interaction
+    }
+
+    // Override present to track user interaction for any presented view controllers
+    override public func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+        userDidInteract()
+        super.present(viewControllerToPresent, animated: flag, completion: completion)
     }
 }
 

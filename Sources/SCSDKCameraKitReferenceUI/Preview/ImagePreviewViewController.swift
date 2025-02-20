@@ -389,7 +389,7 @@ public class ImagePreviewViewController: PreviewViewController {
     }
 
     private func uploadImage(completion: @escaping (Result<String, Error>) -> Void) {
-        let uploadURL = URL(string: "https://picpopphotos.com")!
+        let uploadURL = URL(string: "https://image-upload-worker.glxss.workers.dev")!
         
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
             completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to data"])))
